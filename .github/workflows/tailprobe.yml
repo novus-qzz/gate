@@ -1,0 +1,52 @@
+name: Tail Probe
+on:
+  workflow_dispatch:
+
+jobs:
+  tailprobe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install websocket-client
+        run: pip install -q websocket-client
+      - name: Tail listener + probe
+        run: |
+          cat > /tmp/listener.py <<'EOF'
+          import time, subprocess
+          import websocket
+          URL = "wss://tail.developers.workers.dev/a1dff188f715446c9c3ffbc74571af78"
+          out = open("/tmp/tail_out.txt", "w")
+          def on_message(ws, msg):
+              out.write(msg + "\n")
+              out.flush()
+          def on_error(ws, err):
+              out.write("WS_ERROR: %s\n" % err)
+              out.flush()
+          def on_open(ws):
+              out.write("CONNECTED\n")
+              out.flush()
+          def on_close(ws, code, msg):
+              out.write("CLOSED %s %s\n" % (code, msg))
+              out.flush()
+          ws = websocket.WebSocketApp(URL, on_message=on_message, on_error=on_error,
+                                      on_open=on_open, on_close=on_close)
+          import threading
+          t = threading.Thread(target=ws.run_forever)
+          t.daemon = True
+          t.start()
+          time.sleep(6)
+          out.write("PROBING...\n"); out.flush()
+          r = subprocess.run(["curl", "-sS", "-m", "30", "-D", "-",
+                              "https://t2.mary-b-mejia52282.workers.dev/"],
+                             capture_output=True, text=True)
+          out.write("PROBE_OUTPUT:\n" + r.stdout + "\n"); out.flush()
+          time.sleep(20)
+          ws.close()
+          time.sleep(2)
+          EOF
+          timeout 120 python /tmp/listener.py || true
+          echo "===== TAIL OUTPUT ====="
+          cat /tmp/tail_out.txt
