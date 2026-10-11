@@ -1,0 +1,15 @@
+name: Diag CATCH
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe diag-check
+        run: |
+          echo "--- diag-check root ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://diag-check.mary-b-mejia52282.workers.dev/ | head -c 1500 || true
+          echo ""
+          echo "--- diag-check /check?sstp=1.1.1.1:443 ---"
+          curl -sS -m 40 -w "\nHTTP %{http_code}\n" "https://diag-check.mary-b-mejia52282.workers.dev/check?sstp=vpn:vpn@1.1.1.1:443" | head -c 1500 || true
