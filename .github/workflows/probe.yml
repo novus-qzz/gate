@@ -1,0 +1,22 @@
+name: Probe Worker
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Hostname to probe (no scheme), e.g. t3.mary-b-mejia52282.workers.dev"
+        required: true
+        default: "t3.mary-b-mejia52282.workers.dev"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+        run: |
+          H="https://${{ inputs.host }}/"
+          echo "== GET $H (headers) =="
+          curl -sS -m 30 -D - "$H" | head -c 4000 || true
+          echo ""
+          echo "== GET $H (full body) =="
+          curl -sS -m 30 --http1.1 "$H" -o body.txt -w "http=%{http_code} remote=%{remote_ip} t=%{time_total}\n" || true
+          head -c 3000 body.txt || true
