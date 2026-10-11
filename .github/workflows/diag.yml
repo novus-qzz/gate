@@ -1,0 +1,27 @@
+name: Diag Worker Reachability
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS resolve
+        run: |
+          echo "check:"; getent hosts check-sstp.mary-b-mejia52282.workers.dev || echo "no A record"
+          echo "edt:";   getent hosts edgetunnel.mary-b-mejia52282.workers.dev || echo "no A record"
+
+      - name: Probe check worker
+        run: |
+          echo "--- root ---"
+          curl -sS -m 20 -o /dev/null -w "HTTP %{http_code} ip=%{remote_ip} t=%{time_total}\n" https://check-sstp.mary-b-mejia52282.workers.dev/ || echo "curl-err=$?"
+          echo "--- /ip.json ---"
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" https://check-sstp.mary-b-mejia52282.workers.dev/ip.json | head -c 700 || true
+          echo ""
+          echo "--- /check?sstp=vpn:vpn@1.1.1.1:443 ---"
+          curl -sS -m 40 -w "\nHTTP %{http_code}\n" "https://check-sstp.mary-b-mejia52282.workers.dev/check?sstp=vpn:vpn@1.1.1.1:443" | head -c 900 || true
+
+      - name: Probe edgetunnel worker
+        run: |
+          echo "--- root ---"
+          curl -sS -m 20 -o /dev/null -w "HTTP %{http_code} ip=%{remote_ip} t=%{time_total}\n" https://edgetunnel.mary-b-mejia52282.workers.dev/ || echo "curl-err=$?"
