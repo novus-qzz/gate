@@ -1,0 +1,54 @@
+name: Tail Probe v2
+on:
+  workflow_dispatch:
+
+jobs:
+  tailprobe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install websocket-client
+        run: pip install -q websocket-client
+      - name: Tail listener + probe
+        run: |
+          cat > /tmp/listener.py <<'EOF'
+          import time, subprocess, json
+          import websocket
+
+          URL = "wss://tail.developers.workers.dev/a1dff188f715446c9c3ffbc74571af78"
+          ws = websocket.create_connection(
+              URL,
+              subprotocols=["trace-v1"],
+              timeout=30,
+              header={"User-Agent": "wrangler/4.0.0"},
+          )
+          print("CONNECTED_OK", flush=True)
+          ws.send(json.dumps({"debug": False}))
+          time.sleep(3)
+
+          r = subprocess.run(
+              ["curl", "-sS", "-m", "30", "-D", "-",
+               "https://t2.mary-b-mejia52282.workers.dev/"],
+              capture_output=True, text=True)
+          print("PROBE_OUTPUT_BEGIN", flush=True)
+          print(r.stdout, flush=True)
+          print("PROBE_OUTPUT_END", flush=True)
+
+          deadline = time.time() + 30
+          while time.time() < deadline:
+              ws.settimeout(max(1, deadline - time.time()))
+              try:
+                  msg = ws.recv()
+              except websocket.WebSocketTimeoutException:
+                  continue
+              except Exception as e:
+                  print("RECV_ERR:", e, flush=True)
+                  break
+              print("TAIL_RECV:", msg[:12000], flush=True)
+          ws.close()
+          print("DONE", flush=True)
+          EOF
+          timeout 120 python /tmp/listener.py || true
