@@ -6,10 +6,23 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
+      - name: Probe t2
+        run: |
+          echo "--- t2 ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://t2.mary-b-mejia52282.workers.dev/ | head -c 600 || true
+      - name: Probe test-hello
+        run: |
+          echo "--- test-hello ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://test-hello.mary-b-mejia52282.workers.dev/ | head -c 600 || true
       - name: Probe diag-check
         run: |
-          echo "--- diag-check root ---"
-          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://diag-check.mary-b-mejia52282.workers.dev/ | head -c 1500 || true
-          echo ""
-          echo "--- diag-check /check?sstp=1.1.1.1:443 ---"
-          curl -sS -m 40 -w "\nHTTP %{http_code}\n" "https://diag-check.mary-b-mejia52282.workers.dev/check?sstp=vpn:vpn@1.1.1.1:443" | head -c 1500 || true
+          echo "--- diag-check ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://diag-check.mary-b-mejia52282.workers.dev/ | head -c 900 || true
+      - name: Probe check-sstp
+        run: |
+          echo "--- check-sstp ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://check-sstp.mary-b-mejia52282.workers.dev/ | head -c 900 || true
+      - name: Probe edgetunnel
+        run: |
+          echo "--- edgetunnel ---"
+          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://edgetunnel.mary-b-mejia52282.workers.dev/ | head -c 900 || true
