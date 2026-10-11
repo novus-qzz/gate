@@ -1,0 +1,28 @@
+name: Diag Workers Probe
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe check worker
+        run: |
+          echo "--- check root ---"
+          curl -sS -m 20 -o /dev/null -w "HTTP %{http_code} ip=%{remote_ip} t=%{time_total}\n" https://check-sstp.mary-b-mejia52282.workers.dev/ || echo "curl-err=$?"
+          echo "--- check /check?sstp ---"
+          curl -sS -m 40 -w "\nHTTP %{http_code}\n" "https://check-sstp.mary-b-mejia52282.workers.dev/check?sstp=vpn:vpn@1.1.1.1:443" | head -c 900 || true
+
+      - name: Probe test-hello worker
+        run: |
+          echo "--- hello root ---"
+          curl -sS -m 20 -o /dev/null -w "HTTP %{http_code} ip=%{remote_ip} t=%{time_total}\n" https://test-hello.mary-b-mejia52282.workers.dev/ || echo "curl-err=$?"
+          echo "--- hello body ---"
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" https://test-hello.mary-b-mejia52282.workers.dev/ | head -c 500 || true
+          echo "--- hello check ---"
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" "https://test-hello.mary-b-mejia52282.workers.dev/check?sstp=abc" | head -c 500 || true
+
+      - name: Probe edgetunnel worker
+        run: |
+          echo "--- edt root ---"
+          curl -sS -m 20 -o /dev/null -w "HTTP %{http_code}\n" https://edgetunnel.mary-b-mejia52282.workers.dev/ || echo "curl-err=$?"
